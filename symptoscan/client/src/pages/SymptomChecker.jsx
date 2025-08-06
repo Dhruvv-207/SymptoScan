@@ -12,6 +12,60 @@ import {
 import { symptomsAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
+// Mock data fallback
+const mockSymptoms = [
+  {
+    name: "Headache",
+    description: "Pain in the head or upper neck",
+    category: "Neurological"
+  },
+  {
+    name: "Fever",
+    description: "Body temperature above normal range",
+    category: "General"
+  },
+  {
+    name: "Fatigue",
+    description: "Extreme tiredness or lack of energy",
+    category: "General"
+  },
+  {
+    name: "Cough",
+    description: "Sudden expulsion of air from the lungs",
+    category: "Respiratory"
+  },
+  {
+    name: "Chest Pain",
+    description: "Pain or discomfort in the chest area",
+    category: "Cardiovascular"
+  },
+  {
+    name: "Nausea",
+    description: "Feeling of sickness with urge to vomit",
+    category: "Gastrointestinal"
+  },
+  {
+    name: "Shortness of Breath",
+    description: "Difficulty breathing or feeling breathless",
+    category: "Respiratory"
+  },
+  {
+    name: "Dizziness",
+    description: "Feeling lightheaded or unsteady",
+    category: "Neurological"
+  },
+  {
+    name: "Joint Pain",
+    description: "Pain in one or more joints",
+    category: "Musculoskeletal"
+  },
+  {
+    name: "Skin Rash",
+    description: "Red, itchy, or irritated skin",
+    category: "Other"
+  }
+];
+
 const SymptomChecker = () => {
   const [symptoms, setSymptoms] = useState([]);
   const [filteredSymptoms, setFilteredSymptoms] = useState([]);
@@ -20,6 +74,7 @@ const SymptomChecker = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [diagnosing, setDiagnosing] = useState(false);
+  const [usingMockData, setUsingMockData] = useState(false);
   
   const navigate = useNavigate();
 
@@ -37,8 +92,12 @@ const SymptomChecker = () => {
     try {
       const response = await symptomsAPI.getSymptoms();
       setSymptoms(response.data.symptoms);
+      setUsingMockData(false);
     } catch (error) {
-      toast.error('Failed to load symptoms');
+      console.warn('Failed to load symptoms from API, using mock data:', error);
+      setSymptoms(mockSymptoms);
+      setUsingMockData(true);
+      toast.error('Using offline symptom data. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -81,17 +140,43 @@ const SymptomChecker = () => {
 
     setDiagnosing(true);
     try {
-      const response = await symptomsAPI.diagnose(selectedSymptoms);
-      
-      // Navigate to results page with diagnosis data
-      navigate('/diagnosis-result', { 
-        state: { 
-          diagnosisResult: response.data.result 
-        } 
-      });
+      if (usingMockData) {
+        // Mock diagnosis for offline mode
+        const mockResult = {
+          symptoms: selectedSymptoms,
+          possibleDiseases: [
+            { name: "Common Cold", probability: 75, description: "Viral upper respiratory infection" },
+            { name: "Flu", probability: 60, description: "Influenza virus infection" },
+            { name: "Stress", probability: 45, description: "Physical or mental tension" }
+          ],
+          recommendations: [
+            "Get plenty of rest",
+            "Stay hydrated",
+            "Consult a healthcare professional if symptoms persist",
+            "Monitor your temperature"
+          ],
+          severity: "Low",
+          disclaimer: "This is a mock diagnosis for demonstration purposes only."
+        };
+        
+        setTimeout(() => {
+          navigate('/diagnosis-result', { 
+            state: { 
+              diagnosisResult: mockResult 
+            } 
+          });
+          setDiagnosing(false);
+        }, 2000);
+      } else {
+        const response = await symptomsAPI.diagnose(selectedSymptoms);
+        navigate('/diagnosis-result', { 
+          state: { 
+            diagnosisResult: response.data.result 
+          } 
+        });
+      }
     } catch (error) {
       toast.error('Failed to perform diagnosis');
-    } finally {
       setDiagnosing(false);
     }
   };
@@ -133,6 +218,13 @@ const SymptomChecker = () => {
             Select your symptoms below and get personalized health insights. 
             Our AI-powered system will analyze your symptoms and provide potential diagnoses.
           </p>
+          {usingMockData && (
+            <div className="mt-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg max-w-2xl mx-auto">
+              <p className="text-yellow-300 text-sm">
+                ⚠️ Using offline mode. Connect to database for full functionality.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Warning Notice */}
